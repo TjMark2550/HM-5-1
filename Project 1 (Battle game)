@@ -1,0 +1,296 @@
+import tkinter as tk
+import random
+
+# ฟังก์ชันโจมตี
+def attack(attacker, defender, hp_defender, hp_attacker, buff_attacker, attack_choice, defense_choice):
+    global potion_player, potion_bot
+    logs = []
+    attack = 40
+    defense = 20
+    heal = 50
+    heavy_attack = 60
+    logs.append(f"{attacker} will attacked {defender} with...")
+    # โอกาสคริติคอล 20%
+    is_critical = random.random() < 0.2
+
+    # โจมตีปกติ 
+    if attack_choice == 1:
+        damage = attack + buff_attacker
+        logs.append(f"{attacker} use attack")
+        if is_critical:
+            damage *= 2
+
+        if defense_choice == 1:
+            damage -= defense
+            logs.append(f"{defender} used Defense!")
+        elif defense_choice == 2:
+            logs.append(f"{defender} used Parry!")
+        elif defense_choice == 3:
+            if defender == "Player":
+                if potion_player > 0:
+                    potion_player -= 1
+                    logs.append(f"{defender} used Potion (+{heal} HP) [{potion_player} left]")
+                    hp_defender += heal
+                else:
+                    logs.append(f"{defender} tried to use Potion but none left!")
+            else:
+                if potion_bot > 0:
+                    potion_bot -= 1
+                    logs.append(f"{defender} used Potion (+{heal} HP) [{potion_bot} left]")
+                    hp_defender += heal
+                else:
+                    logs.append(f"{defender} tried to use Potion but none left!")
+
+
+        damage = max(damage, 0)
+        hp_defender -= damage
+        hp_defender = max(hp_defender, 0)
+        crit_text = "(Critical!)" if is_critical else ""
+        logs.append(f"{attacker} attacked {defender} {crit_text} (-{damage} HP)")
+
+    # ใช้สกิลเพิ่ม Buff
+    elif attack_choice == 2:
+        if buff_attacker < 20:
+            buff_attacker += 10
+            logs.append(f"{attacker} used Skill! Buff = {buff_attacker}")
+        else:
+            logs.append(f"{attacker} already has max Buff (20).")
+
+        if defense_choice == 1:
+            logs.append(f"{defender} used Defense!")
+        elif defense_choice == 2:
+            logs.append(f"{defender} used Parry!")
+        elif defense_choice == 3:
+            if defender == "Player":
+                if potion_player > 0:
+                    potion_player -= 1
+                    logs.append(f"{defender} used Potion (+{heal} HP) [{potion_player} left]")
+                    hp_defender += heal
+                else:
+                    logs.append(f"{defender} tried to use Potion but none left!")
+            else:
+                if potion_bot > 0:
+                    potion_bot -= 1
+                    logs.append(f"{defender} used Potion (+{heal} HP) [{potion_bot} left]")
+                    hp_defender += heal
+                else:
+                    logs.append(f"{defender} tried to use Potion but none left!")
+
+    # โจมตีหนัก
+    elif attack_choice == 3:
+        damage = heavy_attack + buff_attacker
+        if is_critical:
+            damage *= 2
+        logs.append(f"{attacker} use heavy attack")
+
+        if defense_choice == 1:
+            damage -= defense
+            logs.append(f"{defender} used Defense!")
+        elif defense_choice == 2:
+            logs.append(f"{defender} used Parry!")
+            logs.append(f"{attacker} took 80 damage from counter!")
+            hp_attacker -= 80
+            damage = 0
+        elif defense_choice == 3:
+            if defender == "Player":
+                if potion_player > 0:
+                    potion_player -= 1
+                    logs.append(f"{defender} used Potion (+{heal} HP) [{potion_player} left]")
+                    hp_defender += heal
+                else:
+                    logs.append(f"{defender} tried to use Potion but none left!")
+            else:
+                if potion_bot > 0:
+                    potion_bot -= 1
+                    logs.append(f"{defender} used Potion (+{heal} HP) [{potion_bot} left]")
+                    hp_defender += heal
+                else:
+                    logs.append(f"{defender} tried to use Potion but none left!")
+
+
+        damage = max(damage, 0)
+        hp_defender -= damage
+        hp_defender = max(hp_defender, 0)
+        crit_text = "(Critical!)" if is_critical else ""
+        logs.append(f"{attacker} attacked {defender} {crit_text} (-{damage} HP)")
+    logs.append("-" * 40)
+    return hp_defender, hp_attacker, buff_attacker, logs
+
+
+# ---------------------- ฟังก์ชัน GUI ----------------------
+def log(message):
+    """แสดงข้อความในกล่อง Log"""
+    txt_log.insert(tk.END, message + "\n")
+    txt_log.see(tk.END)
+
+def update_status():
+    """อัปเดตค่า HP และ Buff บนหน้าจอ"""
+    lbl_player_hp.config(text=f"Player HP: {hp_player}")
+    lbl_bot_hp.config(text=f"Bot HP: {hp_bot}")
+    lbl_potion_player.config(text=f"Player Potions: {potion_player}")
+    lbl_potion_bot.config(text=f"Bot Potions: {potion_bot}")
+
+
+
+def disable_buttons():
+    """ปิดปุ่มทั้งหมด"""
+    for btn in [btn_attack, btn_skill, btn_heavy, btn_defense, btn_parry, btn_potion]:
+        btn.config(state=tk.DISABLED)
+
+def enable_attack_buttons():
+    """เปิดปุ่มเลือกโจมตี"""
+    btn_attack.config(state=tk.NORMAL)
+    btn_skill.config(state=tk.NORMAL)
+    btn_heavy.config(state=tk.NORMAL)
+    btn_defense.config(state=tk.DISABLED)
+    btn_parry.config(state=tk.DISABLED)
+    btn_potion.config(state=tk.DISABLED)
+
+def enable_defense_buttons():
+    """เปิดปุ่มเลือกป้องกัน"""
+    btn_attack.config(state=tk.DISABLED)
+    btn_skill.config(state=tk.DISABLED)
+    btn_heavy.config(state=tk.DISABLED)
+    btn_defense.config(state=tk.NORMAL)
+    btn_parry.config(state=tk.NORMAL)
+    btn_potion.config(state=tk.NORMAL)
+
+# ---------------------- การกระทำของผู้เล่น ----------------------
+def player_action(choice):
+    global hp_player, hp_bot, buff_player
+    hp_bot, hp_player, buff_player, logs = attack ("Player", "Bot", hp_bot, hp_player, buff_player, choice, random.randint(1, 3))
+
+    for m in logs:
+        log(m)
+    update_status()
+
+    #  ตรวจทั้งสองฝ่ายหลังโจมตี
+    if hp_bot <= 0 and hp_player <= 0:
+        log("Both died! It's a draw!")
+        disable_buttons()
+        lbl_turn.config(text="Game End")
+        root.update()
+        return
+    elif hp_bot <= 0:
+        log("Player wins!")
+        disable_buttons()
+        lbl_turn.config(text="Game End")
+        root.update()
+        return
+    elif hp_player <= 0:
+        log("Bot wins!")
+        disable_buttons()
+        lbl_turn.config(text="Game End")
+        root.update()
+        return
+
+    lbl_turn.config(text="Bot's Turn...")
+    disable_buttons()
+    root.after(1000, bot_turn)
+
+# ---------------------- การป้องกันของผู้เล่น ----------------------
+def player_defend(choice):
+    global hp_player, hp_bot, buff_bot
+    hp_player, hp_bot, buff_bot, logs = attack("Bot", "Player", hp_player, hp_bot, buff_bot, attack_bot_choice, choice)
+
+    for m in logs:
+        log(m)
+    update_status()
+
+    #  ตรวจทั้งสองฝ่ายหลังป้องกัน
+    if hp_player <= 0 and hp_bot <= 0:
+        log("Both died! It's a draw!")
+        disable_buttons()
+        lbl_turn.config(text="Game End")
+        root.update()
+        return
+    elif hp_player <= 0:
+        log("Bot wins!")
+        disable_buttons()
+        lbl_turn.config(text="Game End")
+        root.update()
+        return
+    elif hp_bot <= 0:
+        log("Player wins!")
+        disable_buttons()
+        lbl_turn.config(text="Game End")
+        root.update()
+        return
+
+    lbl_turn.config(text="Your Turn: Choose your action")
+    enable_attack_buttons()
+
+# ---------------------- การกระทำของบอท ----------------------
+def bot_turn():
+    global attack_bot_choice
+    attack_bot_choice = random.randint(1, 3)
+    lbl_turn.config(text="Bot is attacking! Choose your defense")
+    enable_defense_buttons()
+
+# ---------------------- สร้างหน้าต่างหลัก ----------------------
+root = tk.Tk()
+root.title("Battle Game")
+root.geometry("480x500")
+
+# ค่าเริ่มต้น
+hp_player = 200
+hp_bot = 200
+buff_player = 0
+buff_bot = 0
+attack_bot_choice = 0
+potion_player = 3
+potion_bot = 3
+
+# ---------------------- ส่วนแสดงผล ----------------------
+lbl_player_hp = tk.Label(root, text=f"Player HP: {hp_player}", font=("Arial", 14))
+lbl_player_hp.pack()
+
+lbl_bot_hp = tk.Label(root, text=f"Bot HP: {hp_bot}", font=("Arial", 14))
+lbl_bot_hp.pack()
+
+lbl_potion_player = tk.Label(root, text=f"Player Potions: {potion_player}", font=("Arial", 12))
+lbl_potion_player.pack()
+
+lbl_potion_bot = tk.Label(root, text=f"Bot Potions: {potion_bot}", font=("Arial", 12))
+lbl_potion_bot.pack()
+
+
+
+lbl_turn = tk.Label(root, text="Your Turn: Choose your action", font=("Arial", 12))
+lbl_turn.pack(pady=10)
+
+# ---------------------- ปุ่มโจมตี ----------------------
+frame_attack = tk.Frame(root)
+frame_attack.pack()
+
+btn_attack = tk.Button(frame_attack, text="Attack", width=12, command=lambda: player_action(1))
+btn_attack.grid(row=0, column=0, padx=5, pady=5)
+
+btn_skill = tk.Button(frame_attack, text="Skill (Buff)", width=12, command=lambda: player_action(2))
+btn_skill.grid(row=0, column=1, padx=5, pady=5)
+
+btn_heavy = tk.Button(frame_attack, text="Heavy Attack", width=12, command=lambda: player_action(3))
+btn_heavy.grid(row=0, column=2, padx=5, pady=5)
+
+# ---------------------- ปุ่มป้องกัน ----------------------
+frame_defense = tk.Frame(root)
+frame_defense.pack()
+
+btn_defense = tk.Button(frame_defense, text="Defense", width=12, command=lambda: player_defend(1))
+btn_defense.grid(row=0, column=0, padx=5, pady=5)
+
+btn_parry = tk.Button(frame_defense, text="Parry", width=12, command=lambda: player_defend(2))
+btn_parry.grid(row=0, column=1, padx=5, pady=5)
+
+btn_potion = tk.Button(frame_defense, text="Potion", width=12, command=lambda: player_defend(3))
+btn_potion.grid(row=0, column=2, padx=5, pady=5)
+
+# ---------------------- กล่องข้อความ Log ----------------------
+txt_log = tk.Text(root, height=10, width=55)
+txt_log.pack(pady=10)
+
+# เริ่มเกม
+enable_attack_buttons()
+update_status()
+
+root.mainloop()
